@@ -64,12 +64,12 @@ export function RecipientSection({ profile, edit, upload, setNotice }: SectionPr
   return (
     <Section id="recipient" title="Người nhận" hint="Tên và ảnh của người sinh nhật.">
       <div className="grid gap-4 sm:grid-cols-2">
-        <TextInput label="Tên đầy đủ" value={recipient.name} onChange={(v) => edit((d) => void (d.recipient.name = v))} placeholder="Nguyễn Minh Anh" maxLength={120} />
+        <TextInput label="Tên đầy đủ" value={recipient.name} onChange={(v) => edit((d) => void (d.recipient.name = v))} placeholder="Nguyễn Văn Minh" maxLength={120} />
         <TextInput
           label="Tên gọi thân mật"
           value={recipient.shortName ?? ''}
           onChange={(v) => edit((d) => void (d.recipient.shortName = v || undefined))}
-          placeholder="Minh Anh"
+          placeholder="Minh"
           hint="Dùng trên phong bì và tiêu đề trang."
           maxLength={60}
         />

@@ -85,8 +85,8 @@ describe('safeUrl', () => {
 
 describe('slugs', () => {
   it('builds readable secret slugs from Vietnamese names', () => {
-    const s = makeSlug('Đặng Thị Minh Anh', 'abcd2345')
-    expect(s).toBe('dang-thi-minh-anh-abcd2345')
+    const s = makeSlug('Đặng Văn Minh', 'abcd2345')
+    expect(s).toBe('dang-van-minh-abcd2345')
     expect(isValidSlug(s)).toBe(true)
   })
   it('falls back when the name has no usable characters', () => {

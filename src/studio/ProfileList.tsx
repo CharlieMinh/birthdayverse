@@ -79,7 +79,7 @@ export function ProfileList({ onOpen, onSignOut }: { onOpen: (slug: string) => v
           value={name}
           onChange={(e) => setName(e.target.value)}
           maxLength={120}
-          placeholder="Tên người sinh nhật, ví dụ: Minh Anh"
+          placeholder="Tên người sinh nhật, ví dụ: Minh"
           aria-label="Tên người sinh nhật"
           className="min-h-11 flex-1 rounded-xl border border-ink/15 bg-bg/70 px-3 text-ink placeholder:text-muted/50 focus:border-accent focus:outline-none"
         />

@@ -67,9 +67,9 @@ describe('profiles', () => {
   it('creates, saves, publishes, lists and deletes a page', async () => {
     const cookie = await login()
     const created = await (
-      await call(cookie, '/api/profiles', { method: 'POST', body: JSON.stringify({ name: 'Minh Anh' }) })
+      await call(cookie, '/api/profiles', { method: 'POST', body: JSON.stringify({ name: 'Minh' }) })
     ).json()
-    expect(created.slug).toMatch(/^minh-anh-[a-z2-9]{8}$/)
+    expect(created.slug).toMatch(/^minh-[a-z2-9]{8}$/)
     expect(created.published).toBe(false)
 
     // Drafts are hidden from the public route, visible in preview when signed in.

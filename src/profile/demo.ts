@@ -9,9 +9,9 @@ export const demoProfile: BirthdayProfile = normalizeProfile({
   published: true,
   lang: 'vi',
   themeId: 'starry',
-  recipient: { name: 'Minh Anh', shortName: 'Minh Anh', age: 25 },
+  recipient: { name: 'Minh', shortName: 'Minh', age: 25 },
   sender: { name: 'Cả nhóm' },
-  invitation: { letter: 'Gửi Minh Anh — cùng xem lại những khoảnh khắc đáng nhớ nhé.' },
+  invitation: { letter: 'Gửi Minh — cùng xem lại những khoảnh khắc đáng nhớ nhé.' },
   gallery: {
     photos: [
       { src: '/photos/memory-01.svg', alt: 'Ảnh mẫu 1', caption: 'Ngày đầu gặp nhau', detail: 'Mùa hè 2019' },
