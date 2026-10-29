@@ -53,7 +53,22 @@ export function ProfileList({ onOpen, onSignOut }: { onOpen: (slug: string) => v
     }
   }
 
-  const copy = async (slug: string) => {
+  const copy = async (item: ProfileSummary) => {
+    const { slug } = item
+    if (!item.published) {
+      const publishNow = window.confirm(
+        `Trang của "${item.name || 'chưa đặt tên'}" đang là bản nháp: người khác mở link sẽ thấy "Không tìm thấy lời chúc".\n\nXuất bản ngay để link dùng được?`,
+      )
+      if (publishNow) {
+        try {
+          await api.save({ ...(await api.get(slug)), published: true })
+          load()
+        } catch {
+          setError('Không xuất bản được, hãy thử lại.')
+          return
+        }
+      }
+    }
     try {
       await navigator.clipboard.writeText(pageUrl(slug))
       setCopied(slug)
@@ -132,7 +147,7 @@ export function ProfileList({ onOpen, onSignOut }: { onOpen: (slug: string) => v
                   <Button variant="primary" onClick={() => onOpen(item.slug)}>
                     Sửa
                   </Button>
-                  <Button onClick={() => copy(item.slug)}>{copied === item.slug ? 'Đã sao chép ✓' : 'Sao chép link'}</Button>
+                  <Button onClick={() => copy(item)}>{copied === item.slug ? 'Đã sao chép ✓' : 'Sao chép link'}</Button>
                   <Button onClick={() => duplicate(item)}>Nhân bản</Button>
                   <Button variant="danger" onClick={() => remove(item)}>
                     Xoá

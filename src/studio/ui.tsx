@@ -159,12 +159,23 @@ export function Slider(props: {
   )
 }
 
-export function Toggle({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
+export function Toggle({
+  label,
+  checked,
+  disabled,
+  onChange,
+}: {
+  label: string
+  checked: boolean
+  disabled?: boolean
+  onChange: (v: boolean) => void
+}) {
   return (
-    <label className="flex cursor-pointer items-center gap-3 text-sm text-ink">
+    <label className={cx('flex items-center gap-3 text-sm text-ink', disabled ? 'cursor-wait opacity-60' : 'cursor-pointer')}>
       <input
         type="checkbox"
         checked={checked}
+        disabled={disabled}
         onChange={(e) => onChange(e.target.checked)}
         className="h-5 w-5 rounded accent-[rgb(var(--c-accent))]"
       />

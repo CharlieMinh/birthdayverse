@@ -78,11 +78,10 @@ export function Editor({ slug, storage, onBack }: { slug: string; storage: 'blob
     })
   }, [])
 
-  const save = useCallback(async (): Promise<boolean> => {
-    if (!profile) return false
+  const persist = useCallback(async (next: BirthdayProfile): Promise<boolean> => {
     setStatus('saving')
     try {
-      const saved = await api.save(profile)
+      const saved = await api.save(next)
       setProfile(saved)
       setSavedJson(JSON.stringify(saved))
       setStatus('idle')
@@ -91,7 +90,9 @@ export function Editor({ slug, storage, onBack }: { slug: string; storage: 'blob
       setStatus('error')
       return false
     }
-  }, [profile])
+  }, [])
+
+  const save = useCallback(async (): Promise<boolean> => (profile ? persist(profile) : false), [profile, persist])
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -147,7 +148,23 @@ export function Editor({ slug, storage, onBack }: { slug: string; storage: 'blob
     if (tab) tab.location.href = `/b/${profile.slug}?preview=1`
   }
 
+  // What visitors actually get is the saved copy, not the draft on screen.
+  const livePublished = savedJson ? (JSON.parse(savedJson) as BirthdayProfile).published : false
+
+  /** Publishing is saved immediately (with any other pending edits), so the link works right away. */
+  const setPublished = async (published: boolean): Promise<boolean> => {
+    const next = { ...profile, published }
+    setProfile(next)
+    return persist(next)
+  }
+
   const copyLink = async () => {
+    if (!livePublished) {
+      const publishNow = window.confirm(
+        'Trang đang là bản nháp: người khác mở link sẽ thấy "Không tìm thấy lời chúc".\n\nXuất bản ngay để link dùng được?',
+      )
+      if (publishNow && !(await setPublished(true))) return
+    }
     try {
       await navigator.clipboard.writeText(pageUrl(profile.slug))
       setCopied(true)
@@ -182,9 +199,10 @@ export function Editor({ slug, storage, onBack }: { slug: string; storage: 'blob
         </div>
         <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-5 gap-y-2 px-4 pb-3 sm:px-6">
           <Toggle
-            label={profile.published ? 'Đã xuất bản — người có link xem được' : 'Bản nháp — chỉ bạn xem thử được'}
-            checked={profile.published}
-            onChange={(v) => edit((d) => void (d.published = v))}
+            label={livePublished ? 'Đã xuất bản — người có link xem được' : 'Xuất bản (đang là bản nháp)'}
+            checked={livePublished}
+            disabled={status === 'saving' || uploads > 0}
+            onChange={(v) => void setPublished(v)}
           />
           <button type="button" onClick={copyLink} className="text-sm text-accent underline-offset-2 hover:underline">
             {copied ? 'Đã sao chép ✓' : `Sao chép link: /b/${profile.slug}`}
@@ -198,6 +216,15 @@ export function Editor({ slug, storage, onBack }: { slug: string; storage: 'blob
           ))}
         </nav>
       </header>
+
+      {!livePublished && (
+        <div className="mx-auto mt-4 max-w-6xl px-4 sm:px-6">
+          <p className="rounded-xl border border-amber-300/30 bg-amber-300/10 px-4 py-3 text-sm text-amber-100">
+            Trang đang là <strong>bản nháp</strong>: chỉ bạn xem được qua nút “Xem thử”. Người khác mở link sẽ thấy “Không tìm thấy lời
+            chúc”. Bật <strong>Xuất bản</strong> ở trên khi muốn gửi link.
+          </p>
+        </div>
+      )}
 
       {notice && (
         <div role="alert" className="mx-auto mt-4 flex max-w-6xl items-start justify-between gap-4 px-4 sm:px-6">

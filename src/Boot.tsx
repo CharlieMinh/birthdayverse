@@ -21,7 +21,7 @@ function parseRoute(location: Location): Route {
 
 type LoadState =
   | { status: 'loading' }
-  | { status: 'ready'; config: BirthdayConfig }
+  | { status: 'ready'; config: BirthdayConfig; draft?: boolean }
   | { status: 'missing' }
   | { status: 'error' }
 
@@ -63,7 +63,7 @@ export function Boot() {
     fetchProfile(route.slug, route.preview)
       .then((profile) => {
         if (cancelled) return
-        setState(profile ? { status: 'ready', config: prepare(profile) } : { status: 'missing' })
+        setState(profile ? { status: 'ready', config: prepare(profile), draft: !profile.published } : { status: 'missing' })
       })
       .catch((err) => {
         console.error('[boot] could not load profile', err)
@@ -87,9 +87,20 @@ export function Boot() {
       />
     )
   }
-  if (state.status === 'ready') return <App config={state.config} />
+  if (state.status === 'ready') {
+    return (
+      <>
+        <App config={state.config} />
+        {state.draft && (
+          <p className="pointer-events-none fixed left-3 top-3 z-50 rounded-full bg-amber-300/90 px-3 py-1 font-body text-xs font-semibold text-black">
+            Bản nháp: chỉ bạn xem được
+          </p>
+        )}
+      </>
+    )
+  }
   if (state.status === 'missing') {
-    return <Notice title="Không tìm thấy lời chúc" body="Đường link này không đúng hoặc đã bị gỡ. Hãy hỏi lại người gửi nhé." />
+    return <Notice title="Không tìm thấy lời chúc" body="Đường link này không đúng, đã bị gỡ hoặc chưa được xuất bản. Hãy hỏi lại người gửi nhé." />
   }
   if (state.status === 'error') {
     return (
