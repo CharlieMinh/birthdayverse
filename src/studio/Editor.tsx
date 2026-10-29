@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { BirthdayProfile } from '../profile/schema'
 import { THEME_PRESETS } from '../theme/presets'
 import { api, pageUrl } from './api'
@@ -14,6 +14,8 @@ import {
   type SectionProps,
 } from './sections'
 import { Button, Toggle } from './ui'
+import { Toast, useDialog } from './Feedback'
+import { GiftCover } from './GiftCover'
 import { UploadError, uploadFile, type UploadKind } from './upload'
 
 const NAV = [
@@ -31,6 +33,7 @@ export type Uploader = (file: File, kind: UploadKind) => Promise<string | null>
 
 /** Loads one page, keeps a local draft, and saves it explicitly (saves count against Blob quotas). */
 export function Editor({ slug, storage, onBack }: { slug: string; storage: 'blob' | 'local'; onBack: () => void }) {
+  const { ask, dialog } = useDialog()
   const [profile, setProfile] = useState<BirthdayProfile | null>(null)
   const [savedJson, setSavedJson] = useState('')
   const [status, setStatus] = useState<'idle' | 'saving' | 'error'>('idle')
@@ -38,6 +41,8 @@ export function Editor({ slug, storage, onBack }: { slug: string; storage: 'blob
   const [uploads, setUploads] = useState(0)
   const [notice, setNotice] = useState('')
   const [copied, setCopied] = useState(false)
+  const [activeSection, setActiveSection] = useState<string>('recipient')
+  const saving = useRef(false)
 
   useEffect(() => {
     api
@@ -79,16 +84,23 @@ export function Editor({ slug, storage, onBack }: { slug: string; storage: 'blob
   }, [])
 
   const persist = useCallback(async (next: BirthdayProfile): Promise<boolean> => {
+    if (saving.current) return false
+    saving.current = true
+    const submitted = JSON.stringify(next)
     setStatus('saving')
     try {
       const saved = await api.save(next)
-      setProfile(saved)
+      setProfile(current => JSON.stringify(current) === submitted ? saved : current)
       setSavedJson(JSON.stringify(saved))
       setStatus('idle')
+      setNotice('Đã lưu thay đổi. Món quà của bạn đã được cập nhật.')
       return true
     } catch {
       setStatus('error')
+      setNotice('Chưa lưu được thay đổi. Nội dung vẫn được giữ trên màn hình; hãy kiểm tra kết nối và thử lại.')
       return false
+    } finally {
+      saving.current = false
     }
   }, [])
 
@@ -98,12 +110,12 @@ export function Editor({ slug, storage, onBack }: { slug: string; storage: 'blob
     const onKey = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
         e.preventDefault()
-        void save()
+        if (uploads === 0) void save()
       }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [save])
+  }, [save, uploads])
 
   const upload: Uploader = useCallback(
     async (file, kind) => {
@@ -153,24 +165,26 @@ export function Editor({ slug, storage, onBack }: { slug: string; storage: 'blob
 
   /** Publishing is saved immediately (with any other pending edits), so the link works right away. */
   const setPublished = async (published: boolean): Promise<boolean> => {
+    if (await ask({ title: published ? 'Sẵn sàng gửi món quà?' : 'Chuyển về bản nháp?', message: published ? 'Các thay đổi hiện tại sẽ được lưu và người có đường link có thể xem món quà.' : 'Người có đường link sẽ không xem được món quà sau khi trạng thái được cập nhật.', confirm: published ? 'Xuất bản món quà' : 'Chuyển về bản nháp' }) === null) return false
     const next = { ...profile, published }
     setProfile(next)
-    return persist(next)
+    const ok = await persist(next)
+    if (ok) setNotice(published ? 'Đã xuất bản. Bạn có thể sao chép link và gửi món quà!' : 'Đã chuyển về bản nháp.')
+    return ok
   }
 
   const copyLink = async () => {
     if (!livePublished) {
-      const publishNow = window.confirm(
-        'Trang đang là bản nháp: người khác mở link sẽ thấy "Không tìm thấy lời chúc".\n\nXuất bản ngay để link dùng được?',
-      )
-      if (publishNow && !(await setPublished(true))) return
+      setNotice('Hãy bật Xuất bản khi bạn sẵn sàng gửi món quà, sau đó sao chép link.')
+      return
     }
     try {
       await navigator.clipboard.writeText(pageUrl(profile.slug))
       setCopied(true)
+      setNotice('Đã sao chép đường link. Sẵn sàng gửi đến người đặc biệt!')
       window.setTimeout(() => setCopied(false), 2000)
     } catch {
-      window.prompt('Sao chép link này:', pageUrl(profile.slug))
+      void ask({ title: 'Sao chép đường link', message: 'Chọn đường link bên dưới và nhấn Ctrl+C hoặc ⌘C để sao chép.', input: pageUrl(profile.slug), readOnly: true })
     }
   }
 
@@ -179,9 +193,13 @@ export function Editor({ slug, storage, onBack }: { slug: string; storage: 'blob
 
   return (
     <div>
+      {dialog}
+      {notice && <Toast message={notice} onClose={() => setNotice('')} />}
       <header className="sticky top-0 z-20 border-b border-ink/10 bg-bg/90 backdrop-blur">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-2 px-4 py-3 sm:px-6">
-          <Button variant="ghost" onClick={onBack} aria-label="Về danh sách">
+          <Button variant="ghost" disabled={uploads > 0 || status === 'saving'} onClick={async () => {
+            if (!dirty || await ask({ title: 'Bạn còn thay đổi chưa lưu', message: 'Quay lại để lưu món quà, hoặc rời trang và bỏ những thay đổi vừa chỉnh sửa.', danger: true, confirm: 'Rời trang, bỏ thay đổi' }) !== null) onBack()
+          }} aria-label="Về danh sách">
             ←
           </Button>
           <div className="min-w-0 flex-1">
@@ -190,7 +208,7 @@ export function Editor({ slug, storage, onBack }: { slug: string; storage: 'blob
               {statusText}
             </p>
           </div>
-          <Button onClick={preview} disabled={uploads > 0}>
+          <Button onClick={preview} disabled={uploads > 0 || status === 'saving'}>
             Xem thử
           </Button>
           <Button variant="primary" onClick={save} disabled={!dirty || status === 'saving' || uploads > 0}>
@@ -208,13 +226,6 @@ export function Editor({ slug, storage, onBack }: { slug: string; storage: 'blob
             {copied ? 'Đã sao chép ✓' : `Sao chép link: /b/${profile.slug}`}
           </button>
         </div>
-        <nav className="mx-auto flex max-w-6xl gap-1 overflow-x-auto px-4 pb-2 [scrollbar-width:none] sm:px-6" aria-label="Các mục">
-          {NAV.map(([id, label]) => (
-            <a key={id} href={`#${id}`} className="shrink-0 rounded-lg px-3 py-1.5 text-sm text-muted hover:bg-ink/[0.06] hover:text-ink">
-              {label}
-            </a>
-          ))}
-        </nav>
       </header>
 
       {!livePublished && (
@@ -226,26 +237,24 @@ export function Editor({ slug, storage, onBack }: { slug: string; storage: 'blob
         </div>
       )}
 
-      {notice && (
-        <div role="alert" className="mx-auto mt-4 flex max-w-6xl items-start justify-between gap-4 px-4 sm:px-6">
-          <p className="flex-1 rounded-xl border border-amber-300/30 bg-amber-300/10 px-4 py-3 text-sm text-amber-100">{notice}</p>
-          <Button variant="ghost" onClick={() => setNotice('')} aria-label="Đóng thông báo">
-            ✕
-          </Button>
-        </div>
-      )}
-
-      <main className="mx-auto max-w-3xl space-y-5 px-4 py-6 sm:px-6">
-        <RecipientSection {...sectionProps} />
-        <ThemeSection {...sectionProps} />
-        <InvitationSection {...sectionProps} />
-        <GallerySection {...sectionProps} />
-        <VoiceSection {...sectionProps} />
-        <MusicSection {...sectionProps} />
-        <CakeSection {...sectionProps} />
-        <FinaleSection {...sectionProps} />
+      <div className="editor-layout">
+        <nav className="editor-nav" aria-label="Các mục thiết kế">
+          <p className="studio-kicker">THIẾT KẾ MÓN QUÀ</p>
+          {NAV.map(([id, label], index) => <button key={id} aria-pressed={activeSection === id} aria-controls={`panel-${id}`} onClick={() => setActiveSection(id)}><span>{String(index + 1).padStart(2, '0')}</span>{label}</button>)}
+        </nav>
+      <main className="editor-content">
+        <div id="panel-recipient" hidden={activeSection !== 'recipient'}><RecipientSection {...sectionProps} /></div>
+        <div id="panel-theme" hidden={activeSection !== 'theme'}><ThemeSection {...sectionProps} /></div>
+        <div id="panel-invitation" hidden={activeSection !== 'invitation'}><InvitationSection {...sectionProps} /></div>
+        <div id="panel-gallery" hidden={activeSection !== 'gallery'}><GallerySection {...sectionProps} /></div>
+        <div id="panel-voice" hidden={activeSection !== 'voice'}><VoiceSection {...sectionProps} /></div>
+        <div id="panel-music" hidden={activeSection !== 'music'}><MusicSection {...sectionProps} /></div>
+        <div id="panel-cake" hidden={activeSection !== 'cake'}><CakeSection {...sectionProps} /></div>
+        <div id="panel-finale" hidden={activeSection !== 'finale'}><FinaleSection {...sectionProps} /></div>
         <p className="pb-10 text-center text-xs text-muted">Nhớ bấm “Lưu” (hoặc Ctrl+S) sau khi chỉnh sửa. Thay đổi hiện lên link sau khoảng 1 phút.</p>
       </main>
+        <aside className="editor-summary"><p className="studio-kicker">MÓN QUÀ CỦA BẠN</p><GiftCover themeId={profile.themeId} name={profile.recipient.name} portrait={profile.recipient.portrait} /><div className="editor-summary-counts"><span>{profile.gallery.photos.length} tấm ảnh</span><span>{profile.voice.messages.length} lời chúc</span></div><p>Bìa minh họa theo phong cách bạn chọn. Bấm “Xem thử” để trải nghiệm toàn bộ animation và âm thanh.</p></aside>
+      </div>
     </div>
   )
 }
