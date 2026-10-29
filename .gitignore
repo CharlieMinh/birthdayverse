@@ -1,0 +1,16 @@
+# Dependencies and build output
+node_modules
+dist
+*.tsbuildinfo
+
+# Secrets and local config (Vercel writes tokens to .env.local)
+.env*
+*.local
+.vercel
+
+# Local Studio uploads (npm run dev)
+.data
+
+# Editor / tool settings
+.claude
+.DS_Store

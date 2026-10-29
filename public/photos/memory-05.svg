@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1500" viewBox="0 0 1200 1500">
+<defs>
+<linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1a1033"/><stop offset="0.55" stop-color="#a855f7"/><stop offset="1" stop-color="#ff9a9e"/></linearGradient>
+<radialGradient id="sun" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#fecfef"/><stop offset="1" stop-color="#fecfef" stop-opacity="0"/></radialGradient>
+<filter id="blur"><feGaussianBlur stdDeviation="18"/></filter>
+</defs>
+<rect width="1200" height="1500" fill="url(#sky)"/>
+<g filter="url(#blur)"><circle cx="507" cy="606" r="149" fill="#fecfef" opacity="0.20"/><circle cx="500" cy="55" r="78" fill="#fecfef" opacity="0.10"/><circle cx="1169" cy="137" r="127" fill="#fecfef" opacity="0.23"/><circle cx="147" cy="189" r="91" fill="#fecfef" opacity="0.17"/><circle cx="94" cy="245" r="50" fill="#fecfef" opacity="0.18"/><circle cx="577" cy="894" r="97" fill="#fecfef" opacity="0.07"/><circle cx="377" cy="4" r="80" fill="#fecfef" opacity="0.06"/><circle cx="110" cy="211" r="80" fill="#fecfef" opacity="0.23"/><circle cx="917" cy="393" r="123" fill="#fecfef" opacity="0.21"/><circle cx="961" cy="596" r="145" fill="#fecfef" opacity="0.16"/><circle cx="488" cy="447" r="72" fill="#fecfef" opacity="0.15"/><circle cx="866" cy="599" r="98" fill="#fecfef" opacity="0.17"/><circle cx="1061" cy="761" r="117" fill="#fecfef" opacity="0.24"/><circle cx="584" cy="861" r="83" fill="#fecfef" opacity="0.24"/></g>
+<circle cx="740" cy="760" r="320" fill="url(#sun)" opacity="0.8"/>
+<polygon points="0,1500 0,1005 200,1000 400,1069 600,1110 800,1063 1000,997 1200,1008 1200,1500" fill="#1a1033" opacity="0.55"/><polygon points="0,1500 0,1146 200,1143 400,1194 600,1225 800,1190 1000,1140 1200,1149 1200,1500" fill="#1a1033" opacity="0.8"/><polygon points="0,1500 0,1277 200,1275 400,1309 600,1330 800,1307 1000,1274 1200,1279 1200,1500" fill="#1a1033" opacity="1"/>
+<text x="600" y="1420" text-anchor="middle" font-family="Georgia, serif" font-size="34" letter-spacing="10" fill="#fecfef" opacity="0.55">MEMORY 05 · REPLACE WITH YOUR PHOTO</text>
+</svg>
