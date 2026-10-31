@@ -1,19 +1,22 @@
-import { useRef } from 'react'
+import { useRef, useState } from 'react'
 import { gsap } from 'gsap'
-import { useConfig } from '../config/ConfigContext'
+import { useConfig, useUi } from '../config/ConfigContext'
 import { useDirector, useDirectorState } from '../engine/DirectorContext'
 import { useGsap } from '../hooks/useGsap'
 import { useReducedMotion } from '../hooks/useReducedMotion'
 import { FxCanvas, type FxHandle } from '../components/FxCanvas'
 import { ReplayIcon } from '../components/Icons'
 import { Portrait } from '../components/Portrait'
+import { KeepsakeSheet } from '../keepsake/KeepsakeSheet'
 import type { SceneProps } from './types'
 
 const POP_GAP_MS = 140
 
 /** Scene 5 — fireworks, confetti and the birthday message. Tap anywhere for more fireworks. */
 export function FinaleScene({ leaving }: SceneProps) {
-  const { finale, recipient, theme, timings } = useConfig()
+  const { finale, recipient, theme, timings, keepsake } = useConfig()
+  const t = useUi()
+  const [saving, setSaving] = useState(false)
   const director = useDirector()
   const { status } = useDirectorState()
   const reduced = useReducedMotion()
@@ -55,7 +58,9 @@ export function FinaleScene({ leaving }: SceneProps) {
   }
 
   const launchAt = (e: React.PointerEvent<HTMLElement>) => {
-    if (leaving || (e.target as HTMLElement).closest('button')) return
+    const target = e.target as HTMLElement
+    // Ignore taps on controls and on the keepsake panel (a portal, so not inside the section).
+    if (leaving || saving || target.closest('button, a') || !root.current?.contains(target)) return
     const rect = e.currentTarget.getBoundingClientRect()
     fx.current?.firework((e.clientX - rect.left) / rect.width, (e.clientY - rect.top) / rect.height)
   }
@@ -110,18 +115,41 @@ export function FinaleScene({ leaving }: SceneProps) {
           {finale.signature}
         </p>
 
-        <div className={`mt-10 transition-all duration-1000 ${ended ? 'translate-y-0 opacity-100' : 'pointer-events-none translate-y-3 opacity-0'}`}>
+        <div
+          className={`mt-8 flex flex-wrap items-center justify-center gap-2.5 sm:mt-10 sm:gap-3 transition-all duration-1000 ${ended ? 'translate-y-0 opacity-100' : 'pointer-events-none translate-y-3 opacity-0'}`}
+        >
+          {keepsake.enabled && (
+            <button
+              type="button"
+              onClick={() => setSaving(true)}
+              tabIndex={ended ? 0 : -1}
+              className="inline-flex items-center gap-2 rounded-full bg-accent px-5 py-3 font-body text-xs font-semibold uppercase tracking-[0.14em] text-bg sm:gap-3 sm:px-7 sm:py-3.5 sm:text-sm sm:tracking-[0.2em] transition hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent active:scale-95"
+            >
+              <DownloadIcon />
+              {t.keepsake.open}
+            </button>
+          )}
           <button
             type="button"
             onClick={() => director.replay()}
             tabIndex={ended ? 0 : -1}
-            className="inline-flex items-center gap-3 rounded-full border border-accent/50 bg-accent/10 px-7 py-3.5 font-body text-sm uppercase tracking-[0.25em] text-accent backdrop-blur transition hover:bg-accent/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent active:scale-95"
+            className="inline-flex items-center gap-2 rounded-full border border-accent/50 bg-accent/10 px-5 py-3 font-body text-xs uppercase tracking-[0.18em] text-accent sm:gap-3 sm:px-7 sm:py-3.5 sm:text-sm sm:tracking-[0.25em] backdrop-blur transition hover:bg-accent/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent active:scale-95"
           >
             <ReplayIcon />
             {finale.replayLabel}
           </button>
         </div>
+
       </div>
+      {saving && <KeepsakeSheet onClose={() => setSaving(false)} />}
     </section>
+  )
+}
+
+function DownloadIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M12 4v11M7 10l5 5 5-5M5 20h14" />
+    </svg>
   )
 }

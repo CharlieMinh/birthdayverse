@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { Caption, CueName, SceneId, VoiceMessage } from '../config/types'
 import { autoCaptions } from '../lib/captions'
-import type { BirthdayProfile } from '../profile/schema'
+import { MUSIC_LIBRARY, MUSIC_MOODS, type MusicMood } from '../audio/library'
+import { LIMITS, type BirthdayProfile } from '../profile/schema'
 import { randomToken } from '../profile/slug'
 import { THEME_IDS, THEME_LABELS, THEME_PRESETS } from '../theme/presets'
 import type { Uploader } from './Editor'
@@ -422,7 +423,8 @@ const CUE_LABELS: Array<[CueName, string, string]> = [
 const KEEP = ''
 const SILENCE = '__silence'
 
-export function MusicSection({ profile, edit, upload, setNotice }: SectionProps) {
+/** `active` is false while the editor shows another section (sections stay mounted, just hidden). */
+export function MusicSection({ profile, edit, upload, setNotice, active = true }: SectionProps & { active?: boolean }) {
   const [busy, setBusy] = useState('')
   const { audio } = profile
 
@@ -466,9 +468,10 @@ export function MusicSection({ profile, edit, upload, setNotice }: SectionProps)
   }
 
   return (
-    <Section id="music" title="Nhạc & âm thanh" hint="Tải nhạc lên, rồi chọn bài cho từng cảnh. Nhạc tự nhỏ lại khi có voice.">
+    <Section id="music" title="Nhạc & âm thanh" hint="Chọn nhạc có sẵn hoặc tải nhạc của bạn, rồi chọn bài cho từng cảnh. Nhạc tự nhỏ lại khi có voice.">
+      <MusicLibraryPicker profile={profile} edit={edit} active={active} />
       <div className="space-y-3">
-        <p className="text-xs font-semibold uppercase tracking-wider text-muted">Nhạc nền</p>
+        <p className="text-xs font-semibold uppercase tracking-wider text-muted">Nhạc đang dùng ({audio.tracks.length})</p>
         {audio.tracks.map((t, i) => (
           <div key={t.id} className="rounded-xl border border-ink/10 bg-bg/40 p-3">
             <div className="flex items-center gap-2">
@@ -496,7 +499,7 @@ export function MusicSection({ profile, edit, upload, setNotice }: SectionProps)
             <Slider label="Âm lượng" value={Math.round(t.volume * 100)} min={10} max={100} step={5} format={(v) => `${v}%`} onChange={(v) => edit((d) => void (d.audio.tracks[i].volume = v / 100))} />
           </div>
         ))}
-        <DropZone accept={AUDIO_ACCEPT} multiple label="+ Thêm bài nhạc" hint="MP3 128 kbps là đủ hay và nhẹ. Tối đa 25 MB mỗi bài." busy={busy === 'tracks'} onFiles={onTracks} />
+        <DropZone accept={AUDIO_ACCEPT} multiple label="+ Tải nhạc của bạn" hint="MP3 128 kbps là đủ hay và nhẹ. Tối đa 25 MB mỗi bài." busy={busy === 'tracks'} onFiles={onTracks} />
       </div>
 
       {audio.tracks.length > 0 ? (
@@ -609,6 +612,89 @@ export function FinaleSection({ profile, edit }: SectionProps) {
         format={(v) => `${v} giây`}
         onChange={(v) => edit((d) => void (d.timings.finale = v))}
       />
+      <Toggle
+        label="Cho phép người nhận lưu kỷ niệm về máy (thiệp ảnh và tệp .zip gồm ảnh, voice, lời chúc)"
+        checked={profile.keepsake.enabled}
+        onChange={(v) => edit((d) => void (d.keepsake.enabled = v))}
+      />
     </Section>
+  )
+}
+
+// ── Thư viện nhạc có sẵn ───────────────────────────────────────────────────
+
+function MusicLibraryPicker({ profile, edit, active }: Pick<SectionProps, 'profile' | 'edit'> & { active: boolean }) {
+  const player = useRef<HTMLAudioElement | null>(null)
+  const [playing, setPlaying] = useState<string | null>(null)
+  const used = new Set(profile.audio.tracks.map((t) => t.src))
+  const full = profile.audio.tracks.length >= LIMITS.tracks
+
+  // Stop the preview when the section is hidden (its stop button is gone) or unmounted.
+  useEffect(() => {
+    if (active) return
+    player.current?.pause()
+    setPlaying(null)
+  }, [active])
+  useEffect(
+    () => () => {
+      player.current?.pause()
+    },
+    [],
+  )
+
+  const preview = (id: string, file: string) => {
+    player.current ??= new Audio()
+    const el = player.current
+    if (playing === id) {
+      el.pause()
+      setPlaying(null)
+      return
+    }
+    el.src = file
+    el.onended = () => setPlaying(null)
+    void el.play().then(
+      () => setPlaying(id),
+      () => setPlaying(null),
+    )
+  }
+
+  const add = (id: string, file: string, title: string) =>
+    edit((d) => {
+      if (d.audio.tracks.some((t) => t.src === file) || d.audio.tracks.length >= LIMITS.tracks) return
+      d.audio.tracks.push({ id: `lib-${id}`, src: file, name: title, volume: 0.6 })
+    })
+
+  return (
+    <div className="space-y-3">
+      <p className="text-xs font-semibold uppercase tracking-wider text-muted">Thư viện nhạc có sẵn (miễn phí bản quyền)</p>
+      {(Object.keys(MUSIC_MOODS) as MusicMood[]).map((mood) => (
+        <div key={mood} className="rounded-xl border border-ink/10 bg-bg/40 p-3">
+          <p className="text-sm font-semibold text-ink">{MUSIC_MOODS[mood]}</p>
+          <ul className="mt-2 divide-y divide-ink/10">
+            {MUSIC_LIBRARY.filter((t) => t.mood === mood).map((t) => {
+              const added = used.has(t.file)
+              return (
+                <li key={t.id} className="flex items-center gap-2 py-2">
+                  <IconButton label={playing === t.id ? `Dừng ${t.title}` : `Nghe thử ${t.title}`} onClick={() => preview(t.id, t.file)}>
+                    {playing === t.id ? '❚❚' : '▶'}
+                  </IconButton>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium text-ink">{t.title}</p>
+                    <p className="truncate text-xs text-muted">{t.note}</p>
+                  </div>
+                  <Button variant={added ? 'ghost' : 'default'} disabled={added || full} onClick={() => add(t.id, t.file, t.title)}>
+                    {added ? 'Đã thêm ✓' : '+ Thêm'}
+                  </Button>
+                </li>
+              )
+            })}
+          </ul>
+        </div>
+      ))}
+      <p className="text-xs text-muted">
+        Nhạc của Kevin MacLeod (incompetech.com), giấy phép CC BY 4.0. Tên tác giả được ghi tự động trong bảng “Lưu kỷ niệm” và lá thư kỷ niệm (không hiện trên màn kết thúc).
+        {full && ` Đã đủ ${LIMITS.tracks} bài, hãy xoá bớt để thêm bài khác.`}
+      </p>
+    </div>
   )
 }

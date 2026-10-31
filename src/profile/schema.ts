@@ -36,6 +36,8 @@ export interface BirthdayProfile {
   finale: BirthdayConfig['finale']
   audio: AudioConfig
   timings: SceneTimings
+  /** Lets the recipient save a card and a ZIP of the photos and messages. */
+  keepsake: { enabled: boolean }
 }
 
 /** One row in the Studio's page list. */
@@ -274,6 +276,7 @@ export function normalizeProfile(raw: unknown, slugOverride?: string): BirthdayP
     },
     audio: readAudio(p.audio),
     timings: readTimings(p.timings),
+    keepsake: { enabled: bool(obj(p.keepsake).enabled, true) },
   }
 }
 
@@ -293,6 +296,7 @@ export function resolveProfile(profile: BirthdayProfile): BirthdayConfig {
     audio: profile.audio,
     theme: THEME_PRESETS[profile.themeId],
     timings: profile.timings,
+    keepsake: profile.keepsake,
     requestFullscreenOnStart: false,
   }
 }

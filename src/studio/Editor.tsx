@@ -248,7 +248,7 @@ export function Editor({ slug, storage, onBack }: { slug: string; storage: 'blob
         <div id="panel-invitation" hidden={activeSection !== 'invitation'}><InvitationSection {...sectionProps} /></div>
         <div id="panel-gallery" hidden={activeSection !== 'gallery'}><GallerySection {...sectionProps} /></div>
         <div id="panel-voice" hidden={activeSection !== 'voice'}><VoiceSection {...sectionProps} /></div>
-        <div id="panel-music" hidden={activeSection !== 'music'}><MusicSection {...sectionProps} /></div>
+        <div id="panel-music" hidden={activeSection !== 'music'}><MusicSection {...sectionProps} active={activeSection === 'music'} /></div>
         <div id="panel-cake" hidden={activeSection !== 'cake'}><CakeSection {...sectionProps} /></div>
         <div id="panel-finale" hidden={activeSection !== 'finale'}><FinaleSection {...sectionProps} /></div>
         <p className="pb-10 text-center text-xs text-muted">Nhớ bấm “Lưu” (hoặc Ctrl+S) sau khi chỉnh sửa. Thay đổi hiện lên link sau khoảng 1 phút.</p>
