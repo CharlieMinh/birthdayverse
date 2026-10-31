@@ -423,7 +423,8 @@ const CUE_LABELS: Array<[CueName, string, string]> = [
 const KEEP = ''
 const SILENCE = '__silence'
 
-export function MusicSection({ profile, edit, upload, setNotice }: SectionProps) {
+/** `active` is false while the editor shows another section (sections stay mounted, just hidden). */
+export function MusicSection({ profile, edit, upload, setNotice, active = true }: SectionProps & { active?: boolean }) {
   const [busy, setBusy] = useState('')
   const { audio } = profile
 
@@ -468,7 +469,7 @@ export function MusicSection({ profile, edit, upload, setNotice }: SectionProps)
 
   return (
     <Section id="music" title="Nhạc & âm thanh" hint="Chọn nhạc có sẵn hoặc tải nhạc của bạn, rồi chọn bài cho từng cảnh. Nhạc tự nhỏ lại khi có voice.">
-      <MusicLibraryPicker profile={profile} edit={edit} />
+      <MusicLibraryPicker profile={profile} edit={edit} active={active} />
       <div className="space-y-3">
         <p className="text-xs font-semibold uppercase tracking-wider text-muted">Nhạc đang dùng ({audio.tracks.length})</p>
         {audio.tracks.map((t, i) => (
@@ -622,12 +623,18 @@ export function FinaleSection({ profile, edit }: SectionProps) {
 
 // ── Thư viện nhạc có sẵn ───────────────────────────────────────────────────
 
-function MusicLibraryPicker({ profile, edit }: Pick<SectionProps, 'profile' | 'edit'>) {
+function MusicLibraryPicker({ profile, edit, active }: Pick<SectionProps, 'profile' | 'edit'> & { active: boolean }) {
   const player = useRef<HTMLAudioElement | null>(null)
   const [playing, setPlaying] = useState<string | null>(null)
   const used = new Set(profile.audio.tracks.map((t) => t.src))
   const full = profile.audio.tracks.length >= LIMITS.tracks
 
+  // Stop the preview when the section is hidden (its stop button is gone) or unmounted.
+  useEffect(() => {
+    if (active) return
+    player.current?.pause()
+    setPlaying(null)
+  }, [active])
   useEffect(
     () => () => {
       player.current?.pause()
