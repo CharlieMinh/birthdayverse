@@ -144,6 +144,8 @@ export interface BirthdayConfig {
   audio: AudioConfig
   theme: Theme
   timings: SceneTimings
+  /** Recipient can save a keepsake card and a ZIP of photos and messages. */
+  keepsake: { enabled: boolean }
   /** Ask the browser for full screen when the envelope is opened. */
   requestFullscreenOnStart: boolean
 }
